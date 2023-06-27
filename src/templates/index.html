@@ -1,0 +1,34 @@
+
+{% extends 'layout.html' %}
+
+{% block body %}
+
+
+<div class="col-auto">
+    <div class="card card-body">
+
+        <form action="/login-face" method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <input type="text" name="codigo" placeholder="codigo de alumno" class="form-control">
+            </div>
+            <div class="form-group">
+                <p></p>
+            </div>
+            <div class="form-group">
+                <input type="file" name="imagen" placeholder="imagen" class="form-data">
+            </div>
+            <div class="form-group">
+                <p></p>
+            </div>
+            <div class="form-group">
+                <button type="submit" class="btn btn-primary btn-block">
+                    Login Reconocimiento facial
+                </button>
+            </div>
+        </form>
+    </div>
+
+</div>
+
+
+{% endblock %}
