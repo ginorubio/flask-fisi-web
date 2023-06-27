@@ -18,11 +18,11 @@ mydb = mysql.connector.connect(
     database="fisidb"
 )
 
-global es_alumno, capturar, activar_camara, imagen_jpg, alumno
+global es_alumno, capturar, activar_camara, frame_capturado, alumno
 es_alumno = 0
 capturar = 0
 activar_camara = 0
-imagen_jpg = None
+frame_capturado = None
 alumno = None
 
 
@@ -36,12 +36,12 @@ def registro_usuario():
 
 @app.route('/agregar-usuario', methods = ['POST', 'GET'])
 def agregar_usuario():
-    global imagen_jpg
+    global frame_capturado,capturar
     if request.method == 'POST':
 
         if request.form.get('Capturar') == 'Capturar':
-            global capturar
             capturar = 1
+            print("Estoy presionando capturar")
         else:
             nombre = request.form['nombre']
             apellido = request.form['apellido']
@@ -49,24 +49,32 @@ def agregar_usuario():
             codigo = request.form['codigo']
             #imagen = request.files['imagen']
 
-            datos_imagen = imagen.read()
+            if frame_capturado is None:
+                flash('No ha capturado una foto para el registro de {}'.format(nombre))
+                return render_template('registro-usuario.html')
+            #datos_imagen = imagen.read() #datos en bytes
             #agregar rostro encoding
-            image_load= face_recognition.load_image_file(imagen)
+
+            #image_load= face_recognition.load_image_file(img_bytes)
 
             # Encuentra todas las caras en la imagen
-            face_locations = face_recognition.face_locations(image_load)
-            
+            face_locations = face_recognition.face_locations(frame_capturado)
+
             if len(face_locations) == 1:
                 # Codifica las características faciales de la cara encontrada
-                face_encoding = face_recognition.face_encodings(image_load, face_locations)[0]
-                imagen_bytes = face_encoding.tostring()
+                face_encoding = face_recognition.face_encodings(frame_capturado, face_locations)[0]
+                imagen_encoding_bytes = face_encoding.tostring()
+
+                ret, imagen_jpeg = cv2.imencode('.jpg', frame_capturado)
+                imagen_bytes = imagen_jpeg.tobytes()
+
                 cursor = mydb.cursor()
                 query = "INSERT INTO alumnos (nombre,apellido,correo,codigo,imagen, imagenEncoding) VALUES (%s, %s, %s,%s, %s, %s)"
-                values = (nombre,apellido, correo, codigo, datos_imagen, imagen_bytes)
+                values = (nombre,apellido, correo, codigo, imagen_bytes, imagen_encoding_bytes)
                 cursor.execute(query,values)
                 mydb.commit()
                 cursor.close()
-                flash('Usuario agregado de manera correcta '.format(nombre))
+                flash('Usuario agregado de manera correcta : {}'.format(nombre))
             else:
                 flash ("Error al obtener las caracteristicas del rostro")
             
@@ -183,26 +191,39 @@ def video_stream():
                b'Content-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n\r\n')
     video_capture.release()
 
+def video_stream_registro():
+    global frame_capturado, capturar
+
+    video_capture = cv2.VideoCapture(0)
+
+    while True:
+        # Captura los cuadros de video #Frame es tipo numpy.ndarray y ret es un Booleano 
+        ret, frame = video_capture.read()
+        
+        # Codifica el cuadro en formato JPEG
+        ret, jpeg = cv2.imencode('.jpg', frame)
+        # Genera el flujo de video como una respuesta en formato multipart/x-mixed-replace
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n\r\n')
+        
+        if capturar :
+            frame_capturado = frame
+            break
+    video_capture.release()
+
 @app.route('/validacion')
 def validacion():
     return render_template('validacion.html')
 
-@app.route('/capture', methods=['POST'])
-def capture():
-    # Capturar la foto utilizando OpenCV
-    camera = cv2.VideoCapture(0)
-    ret, frame = camera.read()
-
-    # Guardar la foto en el directorio estático de Flask
-    photo_path = 'static/photo.jpg'
-    cv2.imwrite(photo_path, frame)
-
-    camera.release()
-    return render_template('validacion.html', photo_path=photo_path , stop = True)
 
 @app.route('/video-feed')
 def video_feed():
     return Response(video_stream(),
+                    mimetype='multipart/x-mixed-replace; boundary=frame')
+
+@app.route('/video-feed-registro')
+def video_feed_registro():
+    return Response(video_stream_registro(),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
 
 if __name__ == '__main__':
