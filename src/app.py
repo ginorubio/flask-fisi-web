@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, redirect, url_for, flash, send_file, Response
+from flask import Flask, request, render_template, redirect, url_for, flash, send_file, Response, session
 import cv2
 import numpy as np
 import io
@@ -34,6 +34,11 @@ def Index():
 def registro_usuario():
     return render_template('registro-usuario.html')
 
+#@app.route('/requests', methods = ['POST', 'GET'])
+def capturarImagen():
+    global frame_capturado,capturar
+    capturar = 1
+
 @app.route('/agregar-usuario', methods = ['POST', 'GET'])
 def agregar_usuario():
     global frame_capturado,capturar
@@ -41,42 +46,49 @@ def agregar_usuario():
 
         if request.form.get('Capturar') == 'Capturar':
             capturar = 1
-            print("Estoy presionando capturar")
+            flash('Se esta capturando la foto')
         else:
-            nombre = request.form['nombre']
-            apellido = request.form['apellido']
-            correo = request.form['correo']
-            codigo = request.form['codigo']
-            #imagen = request.files['imagen']
-
-            if frame_capturado is None:
-                flash('No ha capturado una foto para el registro de {}'.format(nombre))
-                return render_template('registro-usuario.html')
-            #datos_imagen = imagen.read() #datos en bytes
-            #agregar rostro encoding
-
-            #image_load= face_recognition.load_image_file(img_bytes)
-
-            # Encuentra todas las caras en la imagen
-            face_locations = face_recognition.face_locations(frame_capturado)
-
-            if len(face_locations) == 1:
-                # Codifica las características faciales de la cara encontrada
-                face_encoding = face_recognition.face_encodings(frame_capturado, face_locations)[0]
-                imagen_encoding_bytes = face_encoding.tostring()
-
-                ret, imagen_jpeg = cv2.imencode('.jpg', frame_capturado)
-                imagen_bytes = imagen_jpeg.tobytes()
-
-                cursor = mydb.cursor()
-                query = "INSERT INTO alumnos (nombre,apellido,correo,codigo,imagen, imagenEncoding) VALUES (%s, %s, %s,%s, %s, %s)"
-                values = (nombre,apellido, correo, codigo, imagen_bytes, imagen_encoding_bytes)
-                cursor.execute(query,values)
-                mydb.commit()
-                cursor.close()
-                flash('Usuario agregado de manera correcta : {}'.format(nombre))
+            #clear 
+            capturar = 0
+            if request.form.get('Eliminar') == 'Eliminar':
+                frame_capturado = None
+                flash('Volver a tomar una foto')
             else:
-                flash ("Error al obtener las caracteristicas del rostro")
+
+                if frame_capturado is None:
+                    flash('No ha capturado una foto para el registro de {}'.format(nombre))
+                    return render_template('registro-usuario.html')
+
+                # Encuentra todas las caras en la imagen
+                face_locations = face_recognition.face_locations(frame_capturado)
+
+                if len(face_locations) == 1:
+                    # Codifica las características faciales de la cara encontrada
+                    face_encoding = face_recognition.face_encodings(frame_capturado, face_locations)[0]
+                    imagen_encoding_bytes = face_encoding.tostring()
+
+                    ret, imagen_jpeg = cv2.imencode('.jpg', frame_capturado)
+                    imagen_bytes = imagen_jpeg.tobytes()
+                    
+                    nombre = request.form['nombre']
+                    apellido = request.form['apellido']
+                    correo = request.form['correo']
+                    codigo = request.form['codigo']
+                    cursor = mydb.cursor()
+
+                    query = "INSERT INTO alumnos (nombre,apellido,correo,codigo,imagen, imagenEncoding) VALUES (%s, %s, %s,%s, %s, %s)"
+                    values = (nombre,apellido, correo, codigo, imagen_bytes, imagen_encoding_bytes)
+                    cursor.execute(query,values)
+                    mydb.commit()
+                    cursor.close()
+                    flash('Usuario agregado de manera correcta : {}'.format(nombre))
+
+                    #limpiar frame
+                    frame_capturado = None
+                else:
+                    flash ("Error al obtener las caracteristicas del rostro")
+                
+            
             
         
     return render_template('registro-usuario.html')
@@ -87,8 +99,9 @@ def login():
     fecha = str(datetime.datetime.now())
     if es_alumno & (alumno != None):
         cursor = mydb.cursor()
+        idAlumno = alumno[0]
         query = "INSERT INTO logs (idAlumno, fecha) VALUES (%s,%s)"
-        values = (alumno[0],fecha)
+        values = (idAlumno,fecha)
         cursor.execute(query,values)
         mydb.commit()
         cursor.close()
@@ -97,20 +110,16 @@ def login():
         es_alumno = 0
         alumno = None
         
+        session['logged_in'] = True
         return redirect(url_for('dashboard'))
     else:
         flash("Error de autenticación")
-        return render_template('validacion.html')
+        return render_template('loginFace.html')
 
-
-
-@app.route('/mostrar-imagen', methods = ['POST'] )
-def mostrarImagen():
-    if request.method == 'POST':
-        imagen = request.files['imagen']
-        datos_imagen = imagen.read()
-
-    return send_file(io.BytesIO(datos_imagen), mimetype='image/jpeg')
+@app.route('/logout', methods=['POST','GET'])
+def logout():
+    session.pop('logged_in', None)
+    return render_template('index.html')
 
 @app.route('/dashboard')
 def dashboard():
@@ -127,7 +136,7 @@ def convertBinaryToFile(binarydata,filename):
 
 def getAlumnos():
     cursor = mydb.cursor(buffered=True)
-    cursor.execute("SELECT idAlumno,nombre,apellido,correo, codigo,imagenEncoding FROM alumnos")
+    cursor.execute("SELECT idAlumno,nombre,apellido,correo, codigo,imagen,imagenEncoding FROM alumnos")
     alumnos = cursor.fetchall()
     cursor.close()
     return alumnos
@@ -138,7 +147,7 @@ def compararRostros(alumnos, rostros_localizados, frame):
     if len(rostros_localizados) >= 1 :
         face_encoding = face_recognition.face_encodings(frame, rostros_localizados)[0]
         for alumno_data in alumnos:
-            stored_encoding = np.frombuffer(alumno_data[5], dtype=np.float64)
+            stored_encoding = np.frombuffer(alumno_data[6], dtype=np.float64)
                 
             # Calcula la distancia entre las características faciales
             face_distance = face_recognition.face_distance([stored_encoding], face_encoding)
@@ -195,6 +204,8 @@ def video_stream_registro():
     global frame_capturado, capturar
 
     video_capture = cv2.VideoCapture(0)
+    video_capture.set(cv2.CAP_PROP_FRAME_WIDTH, 250)
+    video_capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 250)
 
     while True:
         # Captura los cuadros de video #Frame es tipo numpy.ndarray y ret es un Booleano 
@@ -211,9 +222,9 @@ def video_stream_registro():
             break
     video_capture.release()
 
-@app.route('/validacion')
-def validacion():
-    return render_template('validacion.html')
+@app.route('/login-face')
+def login_render():
+    return render_template('loginFace.html')
 
 
 @app.route('/video-feed')

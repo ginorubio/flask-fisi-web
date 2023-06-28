@@ -1,0 +1,46 @@
+
+
+{% extends 'layout.html' %}
+
+{% block body %}
+
+{% with mensajes = get_flashed_messages() %}
+{% if mensajes %}
+{% for mensaje in mensajes %}
+<div class="card card-body">
+    <p>{{mensaje}}</p>
+</div>
+    
+{% endfor %}
+{% endif %}
+{% endwith %}
+
+<div class="container-fluid">
+
+    <body>
+        <h1>Reconocimiento Facial</h1>
+        <div class="card card-body">
+
+            <form action="/login" method="POST">
+                <div class="row justify-content-md-center pb-2">
+                    <div class="col-md-auto">
+                        <img src="{{ url_for('video_feed') }}" class="rounded" >
+                        <p>Nota: durante 20 segundos el usuario debe estar inmovil, al termino del tiempo dar click</p>
+                    </div>
+                    <div class="col col-lg-2">
+                        <button type="submit" class="btn btn-primary btn-block">
+                            Iniciar sesión
+                        </button>
+                       
+                    </div>
+                </div>
+                
+            </form>
+        </div>
+    </body>
+  
+</div>
+
+
+{% endblock %}
+
