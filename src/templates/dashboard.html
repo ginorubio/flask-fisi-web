@@ -1,11 +1,59 @@
+{% extends 'layout.html' %}
+
 {% block body %}
 
-<div class="col-auto">
-    <div class="card card-body">
-        <p>Inicio de session exitoso de:</p>
-        <p>{{mensaje}}</p>
+
+<div class="row content-md-center">
+    <div class="col">
+        <div class="card card-body" >
+            <h3 class="card-title" >Datos de perfil </h2>
+            <div class="row content-md-center">
+                <div class="col">
+                    <div class="row justify-content-md-center pb-2">
+                        
+                        <div class="col-md-auto">
+                            {% if alumno %}
+                            <img src="{{ url_for('imagen_feed', imagen_bytes = alumno[5]) }}" class="rounded" height="200" width="200">
+                            {% else%}
+                            <p class="text-warning">No se puede mostrar la imagen</p>
+                            {% endif %}
+                            <p>Foto de perfil </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col">
+                    {% if alumno %}
+                    <p class="text-secondary-emphasis">Nombre</p>
+                    <p class="text-secondary">{{alumno[1]}}</p>
+                    <p class="text-secondary-emphasis">Apellido</p>
+                    <p class="text-secondary">{{alumno[2]}}</p>
+                    <p class="text-secondary-emphasis">Correo</p>
+                    <p class="text-secondary">{{alumno[3]}}</p>
+                    {% else%}
+                    <p class="text-warning">No hay datos registrados</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
     </div>
+    
+    <div class="col">
+
+        <div class="col">
+            <div class="card card-body">
+                <h4 class="card-title">Card title</h4>
+                <h6 class="card-subtitle mb-2 text-muted">Card subtitle</h6>
+                <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+            </div>
+        </div>
+
+    </div>
+    
+   
+   
+    
 </div>
+
 
 
 {% endblock %}

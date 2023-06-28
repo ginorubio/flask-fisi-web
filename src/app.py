@@ -18,13 +18,11 @@ mydb = mysql.connector.connect(
     database="fisidb"
 )
 
-global es_alumno, capturar, activar_camara, frame_capturado, alumno
+global es_alumno, capturar, frame_capturado, alumno
 es_alumno = 0
 capturar = 0
-activar_camara = 0
 frame_capturado = None
 alumno = None
-
 
 @app.route('/')
 def Index():
@@ -33,11 +31,6 @@ def Index():
 @app.route('/registro-usuario')
 def registro_usuario():
     return render_template('registro-usuario.html')
-
-#@app.route('/requests', methods = ['POST', 'GET'])
-def capturarImagen():
-    global frame_capturado,capturar
-    capturar = 1
 
 @app.route('/agregar-usuario', methods = ['POST', 'GET'])
 def agregar_usuario():
@@ -98,18 +91,16 @@ def login():
     global alumno, es_alumno
     fecha = str(datetime.datetime.now())
     if es_alumno & (alumno != None):
+
         cursor = mydb.cursor()
         idAlumno = alumno[0]
+
         query = "INSERT INTO logs (idAlumno, fecha) VALUES (%s,%s)"
         values = (idAlumno,fecha)
         cursor.execute(query,values)
         mydb.commit()
         cursor.close()
 
-        #Clear datos
-        es_alumno = 0
-        alumno = None
-        
         session['logged_in'] = True
         return redirect(url_for('dashboard'))
     else:
@@ -118,12 +109,16 @@ def login():
 
 @app.route('/logout', methods=['POST','GET'])
 def logout():
+    global alumno, es_alumno
+    es_alumno = 0
+    alumno = None
     session.pop('logged_in', None)
     return render_template('index.html')
 
 @app.route('/dashboard')
 def dashboard():
-    return render_template('dashboard.html')
+    global alumno
+    return render_template('dashboard.html', alumno = alumno)
 
 def convertToBinary(filename):
     with open(filename, 'rb') as file:
@@ -222,6 +217,12 @@ def video_stream_registro():
             break
     video_capture.release()
 
+def mostrar_imagen():
+    global alumno
+    image_bytes =alumno[5]
+    if image_bytes:
+        yield (b'Content-Type: image/jpeg\r\n\r\n' + image_bytes + b'\r\n\r\n')
+
 @app.route('/login-face')
 def login_render():
     return render_template('loginFace.html')
@@ -235,6 +236,11 @@ def video_feed():
 @app.route('/video-feed-registro')
 def video_feed_registro():
     return Response(video_stream_registro(),
+                    mimetype='multipart/x-mixed-replace; boundary=frame')
+
+@app.route('/imagen-feed')
+def imagen_feed():
+    return Response(mostrar_imagen(),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
 
 if __name__ == '__main__':
