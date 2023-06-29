@@ -1,0 +1,41 @@
+
+{% extends 'layout.html' %}
+
+{% block body %}
+
+
+<div class="col-auto">
+    {% with mensajes = get_flashed_messages() %}
+        {% if mensajes %}
+        {% for mensaje in mensajes %}
+        <div class="alert alert-dismissible alert-primary">
+            <p>{{mensaje}}</p>
+        </div>
+            
+        {% endfor %}
+        {% endif %}
+    {% endwith %}
+    <div class="card card-body">
+        <form action="/agregar-publicacion" method="POST" enctype="multipart/form-data">
+
+            <div class="col">
+                <h3 class="card-title" >Registrar nueva publicación</h2>
+                <div class="form-group">
+                    <input type="text" name="contenido" placeholder="Publicación nueva" class="form-control">
+                </div>
+                <div class="form-group">
+                    <p></p>
+                </div>
+                <div class="form-group">
+                    <input type="submit" class="btn btn-primary btn-block" value="Registrar publicación" name="RegistrarPublicacion">
+                </div>
+            </div>
+
+            
+                
+        </form>
+    </div>
+</div>
+
+
+{% endblock %}

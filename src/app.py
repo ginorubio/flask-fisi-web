@@ -26,7 +26,42 @@ alumno = None
 
 @app.route('/')
 def Index():
-    return render_template('index.html')
+    cursor = mydb.cursor()
+    # Realizar la consulta utilizando JOIN para combinar las tablas
+    query = '''
+        SELECT alumnos.nombre, alumnos.correo, publicaciones.contenido
+        FROM alumnos
+        JOIN publicaciones ON alumnos.idAlumno = publicaciones.idAlumno
+    '''
+    cursor.execute(query)
+
+    # Obtener los resultados de la consulta
+    resultados = cursor.fetchall()
+    # Cerrar el cursor
+    cursor.close()
+    # Renderizar la plantilla HTML y pasar los resultados
+    return render_template('index.html', publicaciones=resultados)
+
+@app.route('/registro-publicacion')
+def page_registro_publicacion():
+    return render_template('registro-publicacion.html')
+
+@app.route('/agregar-publicacion',methods = ['POST'])
+def agregar_publicacion():
+    global alumno
+    if request.method == 'POST':
+        
+        idAlumno = alumno[0]
+        contenido = request.form['contenido']
+
+        cursor = mydb.cursor()
+        query = "INSERT INTO publicaciones (idAlumno,contenido) VALUES (%s, %s)"
+        values = (idAlumno,contenido)
+        cursor.execute(query,values)
+        mydb.commit()
+        cursor.close()
+        flash ("Se ha registrado de manera correcta!")
+    return render_template('registro-publicacion.html')
 
 @app.route('/registro-usuario')
 def registro_usuario():
@@ -113,21 +148,12 @@ def logout():
     es_alumno = 0
     alumno = None
     session.pop('logged_in', None)
-    return render_template('index.html')
+    return redirect(url_for('Index'))
 
 @app.route('/dashboard')
 def dashboard():
     global alumno
     return render_template('dashboard.html', alumno = alumno)
-
-def convertToBinary(filename):
-    with open(filename, 'rb') as file:
-        binarydata = file.read()
-        return binarydata
-
-def convertBinaryToFile(binarydata,filename):
-    with open(filename, 'wb') as file:
-        file.write(binarydata)
 
 def getAlumnos():
     cursor = mydb.cursor(buffered=True)

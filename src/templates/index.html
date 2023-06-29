@@ -5,10 +5,29 @@
 
 
 <div class="col-auto">
+    {% if publicaciones %}
+    {% for publicacion in publicaciones %}
     <div class="card card-body">
-        <h4 class="card-title">Card title</h4>
-        <h6 class="card-subtitle mb-2 text-muted">Card subtitle</h6>
-        <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+        
+        <h4 class="card-title">{{publicacion[0]}}</h4>
+        <h6 class="card-subtitle mb-2 text-muted">{{publicacion[1]}}</h6>
+        <p class="card-text">{{publicacion[2]}}</p>
+    </div>
+    <div>
+        <p>
+            
+        </p>
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="card card-body">
+        <h4 class="card-title">No hay publicaciones</h4>
+        <h6 class="card-subtitle mb-2 text-muted">-</h6>
+        <p class="card-text">-</p>
+    </div>
+    {% endif %}
+
+       
     </div>
 
 </div>
