@@ -11,6 +11,7 @@ zipp==3.10.0
 mysql-connector-python
 opencv-python
 cmake
+build-essential
 dlib
 face_recognition
 
