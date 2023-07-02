@@ -7,3 +7,10 @@ Jinja2==3.1.2
 MarkupSafe==2.1.1
 Werkzeug==2.2.2
 zipp==3.10.0
+mysql-connector-python
+opencv-python
+cmake
+dlib-19.22.99-cp38-cp38-win_amd64.whl
+face_recognition
+
+
