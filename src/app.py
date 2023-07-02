@@ -38,16 +38,22 @@ def page_registro_publicacion():
 def agregar_publicacion():
     global alumno
     if request.method == 'POST':
-        fecha = str(datetime.datetime.now())
-        idAlumno = alumno[0]
-        contenido = request.form['contenido']
+        try:
 
-        cursor = mydb.cursor()
-        query = "INSERT INTO publicaciones (idAlumno,contenido, fecha) VALUES (%s, %s, %s)"
-        values = (idAlumno,contenido, fecha)
-        cursor.execute(query,values)
-        mydb.commit()
-        cursor.close()
+            fecha = str(datetime.datetime.now())
+            idAlumno = alumno[0]
+            contenido = request.form['contenido']
+
+            cursor = mydb.cursor()
+            query = "INSERT INTO publicaciones (idAlumno,contenido, fecha) VALUES (%s, %s, %s)"
+            values = (idAlumno,contenido, fecha)
+            cursor.execute(query,values)
+            mydb.commit()
+            cursor.close()
+        except:
+            flash ("Error al realizar el registro!")
+            return render_template('registro-publicacion.html')
+        
         flash ("Se ha registrado de manera correcta!")
     return render_template('registro-publicacion.html')
 
@@ -85,18 +91,22 @@ def agregar_usuario():
 
                     ret, imagen_jpeg = cv2.imencode('.jpg', frame_capturado)
                     imagen_bytes = imagen_jpeg.tobytes()
-                    
-                    nombre = request.form['nombre']
-                    apellido = request.form['apellido']
-                    correo = request.form['correo']
-                    codigo = request.form['codigo']
-                    cursor = mydb.cursor()
+                    try:
 
-                    query = "INSERT INTO alumnos (nombre,apellido,correo,codigo,imagen, imagenEncoding) VALUES (%s, %s, %s,%s, %s, %s)"
-                    values = (nombre,apellido, correo, codigo, imagen_bytes, imagen_encoding_bytes)
-                    cursor.execute(query,values)
-                    mydb.commit()
-                    cursor.close()
+                        nombre = request.form['nombre']
+                        apellido = request.form['apellido']
+                        correo = request.form['correo']
+                        codigo = request.form['codigo']
+                        cursor = mydb.cursor()
+
+                        query = "INSERT INTO alumnos (nombre,apellido,correo,codigo,imagen, imagenEncoding) VALUES (%s, %s, %s,%s, %s, %s)"
+                        values = (nombre,apellido, correo, codigo, imagen_bytes, imagen_encoding_bytes)
+                        cursor.execute(query,values)
+                        mydb.commit()
+                        cursor.close()
+                    except:
+                        flash ("Error al realizar el registro")
+                        return render_template('registro-usuario.html')
                     flash('Usuario agregado de manera correcta : {}'.format(nombre))
 
                     #limpiar frame
@@ -114,17 +124,20 @@ def login():
     global alumno, es_alumno
     fecha = str(datetime.datetime.now())
     if es_alumno & (alumno != None):
+        try:
+            cursor = mydb.cursor()
+            idAlumno = alumno[0]
 
-        cursor = mydb.cursor()
-        idAlumno = alumno[0]
+            query = "INSERT INTO logs (idAlumno, fecha) VALUES (%s,%s)"
+            values = (idAlumno,fecha)
+            cursor.execute(query,values)
+            mydb.commit()
+            cursor.close()
 
-        query = "INSERT INTO logs (idAlumno, fecha) VALUES (%s,%s)"
-        values = (idAlumno,fecha)
-        cursor.execute(query,values)
-        mydb.commit()
-        cursor.close()
-
-        session['logged_in'] = True
+            session['logged_in'] = True
+        except:
+            flash ("Error al registrar Log")
+            return render_template('loginFace.html')
         return redirect(url_for('dashboard'))
     else:
         flash("Error de autenticación")
@@ -157,65 +170,81 @@ def dashboard():
     return render_template('dashboard.html', alumno = alumno, publicaciones = publicaciones, sesiones = sesiones )
 
 def consultarTodasPublicaciones():
-    cursor = mydb.cursor()
-    #obtener las publicaciones
-        
-    query = '''
-        SELECT alumnos.nombre, alumnos.correo, publicaciones.contenido, publicaciones.fecha
-        FROM alumnos
-        JOIN publicaciones ON alumnos.idAlumno = publicaciones.idAlumno
-    '''
-    cursor.execute(query)
+    try:
+        cursor = mydb.cursor()
+        #obtener las publicaciones
+        query = '''
+            SELECT alumnos.nombre, alumnos.correo, publicaciones.contenido, publicaciones.fecha
+            FROM alumnos
+            JOIN publicaciones ON alumnos.idAlumno = publicaciones.idAlumno
+        '''
+        cursor.execute(query)
 
-    # Obtener los resultados de la consulta
-    resultados = cursor.fetchall()
-    # Cerrar el cursor
-    cursor.close()
-    return resultados
+        # Obtener los resultados de la consulta
+        resultados = cursor.fetchall()
+        # Cerrar el cursor
+        cursor.close()
+        return resultados
+    except:
+        return None
+    
 
 def consultarPublicaciones(idAlumno):
-    cursor = mydb.cursor()
-    #obtener las publicaciones
-        
-    query = '''
-        SELECT contenido, fecha
-        FROM publicaciones WHERE idAlumno = (%s)
-    '''
-    values = (idAlumno,)
-    cursor.execute(query, values)
+    try:
+        cursor = mydb.cursor()
+        #obtener las publicaciones
+            
+        query = '''
+            SELECT contenido, fecha
+            FROM publicaciones WHERE idAlumno = (%s)
+        '''
+        values = (idAlumno,)
+        cursor.execute(query, values)
 
-    # Obtener los resultados de la consulta
-    resultados = cursor.fetchall()
-    # Cerrar el cursor
-    cursor.close()
-    return resultados
+        # Obtener los resultados de la consulta
+        resultados = cursor.fetchall()
+        # Cerrar el cursor
+        cursor.close()
+        return resultados
+    except:
+        return None
+    
 def consultarSesiones(idAlumno):
-    cursor = mydb.cursor()
-    #obtener las publicaciones
-        
-    query = '''
-        SELECT idLog, fecha
-        FROM logs WHERE idAlumno = (%s)
-    '''
-    values = (idAlumno,)
-    cursor.execute(query, values)
+    try:
+        cursor = mydb.cursor()
+        #obtener las publicaciones
+            
+        query = '''
+            SELECT idLog, fecha
+            FROM logs WHERE idAlumno = (%s)
+        '''
+        values = (idAlumno,)
+        cursor.execute(query, values)
 
-    # Obtener los resultados de la consulta
-    resultados = cursor.fetchall()
-    # Cerrar el cursor
-    cursor.close()
-    return resultados
+        # Obtener los resultados de la consulta
+        resultados = cursor.fetchall()
+        # Cerrar el cursor
+        cursor.close()
+        return resultados
+    except:
+        return None
 
 def getAlumnos():
-    cursor = mydb.cursor()
-    cursor.execute("SELECT idAlumno,nombre,apellido,correo, codigo,imagen,imagenEncoding FROM alumnos")
-    alumnos = cursor.fetchall()
-    cursor.close()
-    return alumnos
+    try:
+
+        cursor = mydb.cursor()
+        cursor.execute("SELECT idAlumno,nombre,apellido,correo, codigo,imagen,imagenEncoding FROM alumnos")
+        alumnos = cursor.fetchall()
+        cursor.close()
+        return alumnos
+    except:
+        return None
 
 def compararRostros(alumnos, rostros_localizados, frame):
     global es_alumno, alumno
     nombre = "desconocido"
+    if alumnos is None:
+        return nombre
     if len(rostros_localizados) >= 1 :
         face_encoding = face_recognition.face_encodings(frame, rostros_localizados)[0]
         for alumno_data in alumnos:
