@@ -2,57 +2,107 @@
 
 {% block body %}
 
-
-<div class="row content-md-center">
-    <div class="col">
-        <div class="card card-body" >
-            <h3 class="card-title" >Datos de perfil </h2>
-            <div class="row content-md-center">
-                <div class="col">
-                    <div class="row justify-content-md-center pb-2">
-                        
-                        <div class="col-md-auto">
-                            {% if alumno %}
-                            <img src="{{ url_for('imagen_feed', imagen_bytes = alumno[5]) }}" class="rounded" height="200" width="200">
-                            {% else%}
-                            <p class="text-warning">No se puede mostrar la imagen</p>
-                            {% endif %}
-                            <p>Foto de perfil </p>
+<div class="container">
+    <div class="row content-md-center">
+        <div class="col">
+            <div class="card card-body" >
+                <h3 class="card-title" >Datos de perfil </h3>
+                <div class="row content-md-center">
+                    <div class="col">
+                        <div class="row justify-content-md-center pb-2">
+                            
+                            <div class="col-md-auto">
+                                {% if alumno %}
+                                <img src="{{ url_for('imagen_feed') }}" class="rounded" height="200" width="200">
+                                {% else%}
+                                <p class="text-warning">No se puede mostrar la imagen</p>
+                                {% endif %}
+                                <p>Foto de perfil </p>
+                            </div>
                         </div>
                     </div>
-                </div>
-                <div class="col">
-                    {% if alumno %}
-                    <p class="text-secondary-emphasis">Nombre</p>
-                    <p class="text-secondary">{{alumno[1]}}</p>
-                    <p class="text-secondary-emphasis">Apellido</p>
-                    <p class="text-secondary">{{alumno[2]}}</p>
-                    <p class="text-secondary-emphasis">Correo</p>
-                    <p class="text-secondary">{{alumno[3]}}</p>
-                    {% else%}
-                    <p class="text-warning">No hay datos registrados</p>
-                    {% endif %}
+                    <div class="col">
+                        {% if alumno %}
+                        <p class="text-secondary-emphasis">Nombre</p>
+                        <p class="text-secondary">{{alumno[1]}}</p>
+                        <p class="text-secondary-emphasis">Apellido</p>
+                        <p class="text-secondary">{{alumno[2]}}</p>
+                        <p class="text-secondary-emphasis">Correo institucional</p>
+                        <p class="text-secondary">{{alumno[3]}}</p>
+                        <p class="text-secondary-emphasis">Código de estudiante</p>
+                        <p class="text-secondary">{{alumno[4]}}</p>
+                        {% else%}
+                        <p class="text-warning">No hay datos registrados</p>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-    
-    <div class="col">
-
         <div class="col">
             <div class="card card-body">
-                <h4 class="card-title">Card title</h4>
-                <h6 class="card-subtitle mb-2 text-muted">Card subtitle</h6>
-                <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                <h3 class="card-title" >Registro de publicaciones</h3>
+                <table class="table table-hover">
+                    <thead>
+                      <tr class="table-primary">
+                        <th scope="col">Contenido</th>
+                        <th scope="col">Fecha</th>
+                      </tr>
+                    </thead>
+                    
+                    <tbody>
+                    {% if publicaciones %}
+                    {% for publicacion in publicaciones %}
+                      <tr class="table-light">
+                        <td>{{publicacion[0]}}</td>
+                        <td>{{publicacion[1]}}</td>
+                      </tr>
+                    {% endfor %}
+                    {% else %}
+                    <tr class="table-light">
+                        <td>-</td>
+                        <td>-</td>
+                    </tr>
+                    {% endif %}
+                    </tbody>
+                  </table>
+            </div>
+
+            <div>
+                <p>
+
+                </p>
+            </div>
+            <div class="card card-body">
+                <h3 class="card-title" >Registro de Sesiones</h3>
+                <table class="table table-hover">
+                    <thead>
+                      <tr class="table-primary">
+                        <th scope="col">ID</th>
+                        <th scope="col">Fecha</th>
+                      </tr>
+                    </thead>
+                    
+                    <tbody>
+                    {% if sesiones %}
+                    {% for sesion in sesiones %}
+                      <tr class="table-light">
+                        <td>{{sesion[0]}}</td>
+                        <td>{{sesion[1]}}</td>
+                      </tr>
+                    {% endfor %}
+                    {% else %}
+                      <tr class="table-light">
+                        <td>-</td>
+                        <td>-</td>
+                      </tr>
+                    {% endif %}
+                    </tbody>
+                  </table>
             </div>
         </div>
-
     </div>
-    
-   
-   
-    
 </div>
+
 
 
 

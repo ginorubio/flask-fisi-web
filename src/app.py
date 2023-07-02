@@ -26,21 +26,9 @@ alumno = None
 
 @app.route('/')
 def Index():
-    cursor = mydb.cursor()
-    # Realizar la consulta utilizando JOIN para combinar las tablas
-    query = '''
-        SELECT alumnos.nombre, alumnos.correo, publicaciones.contenido
-        FROM alumnos
-        JOIN publicaciones ON alumnos.idAlumno = publicaciones.idAlumno
-    '''
-    cursor.execute(query)
-
-    # Obtener los resultados de la consulta
-    resultados = cursor.fetchall()
-    # Cerrar el cursor
-    cursor.close()
+    publicaciones = consultarTodasPublicaciones()
     # Renderizar la plantilla HTML y pasar los resultados
-    return render_template('index.html', publicaciones=resultados)
+    return render_template('index.html', publicaciones=publicaciones)
 
 @app.route('/registro-publicacion')
 def page_registro_publicacion():
@@ -50,13 +38,13 @@ def page_registro_publicacion():
 def agregar_publicacion():
     global alumno
     if request.method == 'POST':
-        
+        fecha = str(datetime.datetime.now())
         idAlumno = alumno[0]
         contenido = request.form['contenido']
 
         cursor = mydb.cursor()
-        query = "INSERT INTO publicaciones (idAlumno,contenido) VALUES (%s, %s)"
-        values = (idAlumno,contenido)
+        query = "INSERT INTO publicaciones (idAlumno,contenido, fecha) VALUES (%s, %s, %s)"
+        values = (idAlumno,contenido, fecha)
         cursor.execute(query,values)
         mydb.commit()
         cursor.close()
@@ -84,7 +72,7 @@ def agregar_usuario():
             else:
 
                 if frame_capturado is None:
-                    flash('No ha capturado una foto para el registro de {}'.format(nombre))
+                    flash('No ha capturado una foto para el registro')
                     return render_template('registro-usuario.html')
 
                 # Encuentra todas las caras en la imagen
@@ -142,21 +130,84 @@ def login():
         flash("Error de autenticación")
         return render_template('loginFace.html')
 
+@app.route('/login-face')
+def login_render():
+    return render_template('loginFace.html')
+
 @app.route('/logout', methods=['POST','GET'])
 def logout():
-    global alumno, es_alumno
+    global alumno, es_alumno, capturar, frame_capturado
     es_alumno = 0
+    capturar = 0
+    frame_capturado = None
     alumno = None
+
     session.pop('logged_in', None)
     return redirect(url_for('Index'))
 
 @app.route('/dashboard')
 def dashboard():
     global alumno
-    return render_template('dashboard.html', alumno = alumno)
+    publicaciones = None
+    sesiones = None
+    if alumno != None:
+        idAlumno = alumno[0]
+        publicaciones  = consultarPublicaciones(idAlumno=idAlumno)
+        sesiones = consultarSesiones(idAlumno=idAlumno)
+    return render_template('dashboard.html', alumno = alumno, publicaciones = publicaciones, sesiones = sesiones )
+
+def consultarTodasPublicaciones():
+    cursor = mydb.cursor()
+    #obtener las publicaciones
+        
+    query = '''
+        SELECT alumnos.nombre, alumnos.correo, publicaciones.contenido, publicaciones.fecha
+        FROM alumnos
+        JOIN publicaciones ON alumnos.idAlumno = publicaciones.idAlumno
+    '''
+    cursor.execute(query)
+
+    # Obtener los resultados de la consulta
+    resultados = cursor.fetchall()
+    # Cerrar el cursor
+    cursor.close()
+    return resultados
+
+def consultarPublicaciones(idAlumno):
+    cursor = mydb.cursor()
+    #obtener las publicaciones
+        
+    query = '''
+        SELECT contenido, fecha
+        FROM publicaciones WHERE idAlumno = (%s)
+    '''
+    values = (idAlumno,)
+    cursor.execute(query, values)
+
+    # Obtener los resultados de la consulta
+    resultados = cursor.fetchall()
+    # Cerrar el cursor
+    cursor.close()
+    return resultados
+def consultarSesiones(idAlumno):
+    cursor = mydb.cursor()
+    #obtener las publicaciones
+        
+    query = '''
+        SELECT idLog, fecha
+        FROM logs WHERE idAlumno = (%s)
+    '''
+    values = (idAlumno,)
+    cursor.execute(query, values)
+
+    # Obtener los resultados de la consulta
+    resultados = cursor.fetchall()
+    # Cerrar el cursor
+    cursor.close()
+    return resultados
 
 def getAlumnos():
-    cursor = mydb.cursor(buffered=True)
+    cursor = mydb.cursor()
     cursor.execute("SELECT idAlumno,nombre,apellido,correo, codigo,imagen,imagenEncoding FROM alumnos")
     alumnos = cursor.fetchall()
     cursor.close()
@@ -172,15 +223,11 @@ def compararRostros(alumnos, rostros_localizados, frame):
                 
             # Calcula la distancia entre las características faciales
             face_distance = face_recognition.face_distance([stored_encoding], face_encoding)
-            if face_distance < 0.6:  # Ajusta el umbral según tus necesidades
-                # Inicio de sesión exitoso
+            if face_distance < 0.6:  
+                #El rostro pertenece a un alumno de la BD
                 nombre = alumno_data[1]
                 es_alumno = 1
                 alumno = alumno_data
-            else:
-                nombre = "Desconocido"
-                alumno = None
-                es_alumno = 0
     else:
         nombre = "Desconocido"
         alumno = None
@@ -188,13 +235,18 @@ def compararRostros(alumnos, rostros_localizados, frame):
 
     return nombre
 
+@app.route('/video-feed')
+def video_feed():
+    return Response(video_stream(),
+                    mimetype='multipart/x-mixed-replace; boundary=frame')
+
 def video_stream():
     global es_alumno, imagen_bytes
     
     alumnos = getAlumnos()
 
     video_capture = cv2.VideoCapture(0)
-
+    #Tiempo limite para que el usuario realice el reconocimiento de su rostro (20 seg)
     contador = 20
     while True:
         # Captura los cuadros de video #Frame es tipo numpy.ndarray y ret es un Booleano 
@@ -210,6 +262,7 @@ def video_stream():
         for (top, right, bottom, left) in face_locations:
             # Dibuja un cuadro alrededor de cada rostro detectado
             cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 255), 2)
+            #Muestra el nombre del usuario que corresponde el rostro
             cv2.putText(frame, nombreResultado, (left + 6, bottom - 6), cv2.FONT_HERSHEY_DUPLEX, 0.5, (255, 255, 255), 1)
         
         if contador <= 0 :
@@ -220,6 +273,11 @@ def video_stream():
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n\r\n')
     video_capture.release()
+
+@app.route('/video-feed-registro')
+def video_feed_registro():
+    return Response(video_stream_registro(),
+                    mimetype='multipart/x-mixed-replace; boundary=frame')
 
 def video_stream_registro():
     global frame_capturado, capturar
@@ -243,31 +301,17 @@ def video_stream_registro():
             break
     video_capture.release()
 
+@app.route('/imagen-feed')
+def imagen_feed():
+    return Response(mostrar_imagen(),
+                    mimetype='multipart/x-mixed-replace; boundary=frame')
+
 def mostrar_imagen():
     global alumno
     image_bytes =alumno[5]
     if image_bytes:
         yield (b'Content-Type: image/jpeg\r\n\r\n' + image_bytes + b'\r\n\r\n')
 
-@app.route('/login-face')
-def login_render():
-    return render_template('loginFace.html')
-
-
-@app.route('/video-feed')
-def video_feed():
-    return Response(video_stream(),
-                    mimetype='multipart/x-mixed-replace; boundary=frame')
-
-@app.route('/video-feed-registro')
-def video_feed_registro():
-    return Response(video_stream_registro(),
-                    mimetype='multipart/x-mixed-replace; boundary=frame')
-
-@app.route('/imagen-feed')
-def imagen_feed():
-    return Response(mostrar_imagen(),
-                    mimetype='multipart/x-mixed-replace; boundary=frame')
 
 if __name__ == '__main__':
     
